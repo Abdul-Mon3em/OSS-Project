@@ -22,6 +22,16 @@ namespace SmartLabel.Controllers
             _db = db;
         }
 
+        // Helper method to build full image URL
+        private string BuildImageUrl(string imagePath)
+        {
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                return $"{Request.Scheme}://{Request.Host}/images/{Path.GetFileName(imagePath)}";
+            }
+            return null;
+        }
+
         // POST: api/Category
         [HttpPost]
         [Authorize(Roles = "Admin")]
@@ -35,24 +45,25 @@ namespace SmartLabel.Controllers
             var category = new Category
             {
                 Name = catModel.Name,
-                Descount = 0, // You can set a default value if Descount is not provided in CategoryModel
+                Descount =  0, // Default to 0 if Descount is not provided
             };
 
             if (catModel.Image != null)
             {
                 var fileName = Path.GetFileName(catModel.Image.FileName);
-                var filePath = Path.Combine(_imagePath, fileName);
+                var filePath = Path.Combine("images", fileName);  // Store relative path
 
                 // Ensure the images directory exists
-                Directory.CreateDirectory(_imagePath);
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", filePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                using (var fileStream = new FileStream(fullPath, FileMode.Create))
                 {
                     await catModel.Image.CopyToAsync(fileStream);
                 }
 
-                // Save the file path or file name in the Category model
-                category.ImagePath = filePath; // You can save only the filename if you prefer
+                // Save only the relative file path
+                category.ImagePath = filePath;
             }
 
             if (ModelState.IsValid)
@@ -78,6 +89,12 @@ namespace SmartLabel.Controllers
                 return NotFound("No Categories found.");
             }
 
+            // Build full image URL for each category
+            foreach (var category in categories)
+            {
+                category.ImagePath = BuildImageUrl(category.ImagePath);
+            }
+
             return Ok(categories);
         }
 
@@ -91,6 +108,9 @@ namespace SmartLabel.Controllers
             {
                 return NotFound($"Category with ID {id} not found.");
             }
+
+            // Build full image URL if image exists
+            category.ImagePath = BuildImageUrl(category.ImagePath);
 
             return Ok(category);
         }
@@ -112,24 +132,25 @@ namespace SmartLabel.Controllers
             }
 
             existingCategory.Name = catModel.Name;
-            existingCategory.Descount = 0; // Default value for Descount if not provided in CategoryModel
+            existingCategory.Descount =  0; // Default value for Descount if not provided
 
-            // Handle image update (optional)
+            // Handle image update 
             if (catModel.Image != null)
             {
                 var fileName = Path.GetFileName(catModel.Image.FileName);
-                var filePath = Path.Combine(_imagePath, fileName);
+                var filePath = Path.Combine("images", fileName);  // Store relative path
 
                 // Ensure the images directory exists
-                Directory.CreateDirectory(_imagePath);
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", filePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                using (var fileStream = new FileStream(fullPath, FileMode.Create))
                 {
                     await catModel.Image.CopyToAsync(fileStream);
                 }
 
-                // Save the file path or file name in the Category model
-                existingCategory.ImagePath = filePath; // You can store only the filename if you prefer
+                // Save only the relative file path
+                existingCategory.ImagePath = filePath;
             }
 
             try
@@ -161,7 +182,7 @@ namespace SmartLabel.Controllers
 
             if (category == null)
             {
-                return NotFound($"Category with ID {id} not found.");
+                return NotFound($"no products ander that category");
             }
 
             _db.Categories.Remove(category);

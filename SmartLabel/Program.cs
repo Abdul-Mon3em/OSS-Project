@@ -22,7 +22,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddIdentity<Users,IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
 builder.Services.addjwtAuthentictaion(builder.Configuration);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader(); 
+            
+    });
+});
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
@@ -39,7 +48,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseCors("AllowAllOrigins");
+app.UseStaticFiles();
 app.MapControllers();
 
 app.Run();
